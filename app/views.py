@@ -43,7 +43,8 @@ def login():
 
     # change this to actually validate the entire form submission
     # and not just one field
-    if form.username.data:
+    #if form.username.data:
+    if form.validate_on_submit():
         # Get the username and password values from the form.
 
         # Using your model, query database for a user based on the username
@@ -51,9 +52,18 @@ def login():
         # You will need to import the appropriate function to do so.
         # Then store the result of that query to a `user` variable so it can be
         # passed to the login_user() method below.
+        username = form.username.data
+        password = form.password.data
+
+        user = UserProfile.query.filter_by(username=username).first()
+
+        if user is None or not check_password_hash(user.password, password):
+            flash('Invalid username or password')
+            return redirect(url_for('login'))
 
         # Gets user id, load into session
         login_user(user)
+        flash('You have been logged in.')
 
         # Remember to flash a message to the user
         return redirect(url_for("home"))  # The user should be redirected to the upload form instead
