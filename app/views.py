@@ -5,7 +5,9 @@ from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from app.models import UserProfile
 from app.forms import LoginForm
-
+from werkzeug.security import check_password_hash
+from app.forms import UploadForm
+from flask import send_from_directory
 
 ###
 # Routing for your application.
@@ -24,17 +26,24 @@ def about():
 
 
 @app.route('/upload', methods=['POST', 'GET'])
+@login_required
 def upload():
     # Instantiate your form class
-
+    form = UploadForm()
     # Validate file upload on submit
     if form.validate_on_submit():
         # Get file data and save to your uploads folder
+        img = form.file.data
+        filename = secure_filename(img.filename)
+        img.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-        flash('File Saved', 'success')
-        return redirect(url_for('home')) # Update this to redirect the user to a route that displays all uploaded image files
-
-    return render_template('upload.html')
+        flash('File uploaded successfully!', 'success')
+        return redirect(url_for('files')) # Update this to redirect the user to a route that displays all uploaded image files
+    elif form.is_submitted():
+            flash('Only JPG, PNG and JPEG files are allowed.')
+            return render_template('upload.html', form=form)
+    else:
+        return render_template('upload.html', form=form)
 
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -66,7 +75,7 @@ def login():
         flash('You have been logged in.')
 
         # Remember to flash a message to the user
-        return redirect(url_for("home"))  # The user should be redirected to the upload form instead
+        return redirect(url_for("upload"))  # The user should be redirected to the upload form instead
     return render_template("login.html", form=form)
 
 # user_loader callback. This callback is used to reload the user object from
@@ -110,3 +119,9 @@ def add_header(response):
 def page_not_found(error):
     """Custom 404 page."""
     return render_template('404.html'), 404
+
+@app.route('/files')
+@login_required
+def files():
+    images = get_uploaded_images()
+    return render_template('files.html', images=images)
